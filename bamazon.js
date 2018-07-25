@@ -200,18 +200,6 @@ function login() {
     });
 };
 
-function updateData(table, where, equals, newV) {
-};
-
-function getRow(table, column, equals) {
-    connection.query(`SELECT * FROM ${table} WHERE ${column} = ?`, [equals], (err, res) => {
-        if (err) throw err;
-        console.log(res)
-        return (res)
-    });
-};
-
-
 function shop(user) {
     inq.prompt([{
         message: `
@@ -222,57 +210,48 @@ function shop(user) {
         type: 'list',
         name: 'shop',
         choices: ['Search for a Product',
-            'View all available Products',
-            'Buy Item using a Product ID',
-            'Logout']
+        'View all available Products',
+        'Buy Item using a Product ID',
+        'Logout']
     }]).then(function (answer) {
         switch (answer.shop) {
             case 'Search for a Product':
-                search(user);
-                break;
-
+            search(user);
+            break;
+            
             case 'View all available Products':
-                browse(user);
-                break;
-
+            browse(user);
+            break;
+            
             case 'Buy Item using a Product ID':
-                buy(user);
-                break;
+            buy(user);
+            break;
             case 'Logout':
-                launchMenu();
-                break;
+            launchMenu();
+            break;
         }
     });
-};
-
-function manage(user) {
-    //todo
-    launchMenu();
-};
-
-function supervise(user) {
-    launchMenu();
 };
 
 function search(user) {
     inq.prompt([{
         message: `
-        ===========================================================================================
-        What is it you're looking for?
-        ===========================================================================================
-        `,
+    ===========================================================================================
+    What is it you're looking for?
+    ===========================================================================================
+    `,
         name: 'search',
-        validate: function (username) {
+        validate: function (search) {
             var done = this.async();
             setTimeout(function () {
-                if (username.indexOf(' ') !== -1 || username.indexOf(',') !== -1) {
+                if (search.indexOf(' ') !== -1 || search.indexOf(',') !== -1) {
                     console.error(`
-        ===========================================================================================
-        That is not a valid search. Make sure there are no spaces or commas, ya nut!
-        ===========================================================================================
-        `);
-                    return;
-                }
+    ===========================================================================================
+    That is not a valid search. Make sure there are no spaces or commas, ya nut!
+    ===========================================================================================
+    `);
+        return;
+    }
                 done(null, true);
             }, 500);
         }
@@ -284,10 +263,10 @@ function search(user) {
                 inq.prompt({
                     type: 'confirm',
                     message: `
-        ===========================================================================================
-        Looks like we don't have ${wants}. Would you like to search again?
-        ===========================================================================================
-        `,
+    ===========================================================================================
+    Looks like we don't have ${wants}. Would you like to search again?
+    ===========================================================================================
+    `,
                     name: 'again'
                 }).then((answer) => {
                     if (answer.again) {
@@ -299,7 +278,7 @@ function search(user) {
                 });
             }
             else {
-                let searchT = new Table({
+                let sTable = new Table({
                     chars: {
                         'top': '═', 'top-mid': '╤', 'top-left': '╔', 'top-right': '╗'
                         , 'bottom': '═', 'bottom-mid': '╧', 'bottom-left': '╚', 'bottom-right': '╝'
@@ -307,7 +286,7 @@ function search(user) {
                         , 'right': '║', 'right-mid': '╢', 'middle': '│'
                     }
                 });
-                searchT.push(['Product Name', 'Department', 'Price', 'Stock'])
+                sTable.push(['Product ID', 'Product Name', 'Department', 'Price', 'Stock'])
                 for (i = 0; i < res.length; i++) {
                     let rowArr = []
                     let obj = res[i]
@@ -316,22 +295,109 @@ function search(user) {
                             rowArr.push(obj[key]);
                         }
                     };
-                    searchT.push(rowArr)
-
+                    sTable.push(rowArr);
                 }
-            }
-            return (res)
-        });
+                console.log(sTable.toString());
+                inq.prompt({
+                    type: 'list',
+                    message: `
+        ===========================================================================================
+        What would you like to do?
+        ===========================================================================================
+        `,
+                    choices: ['Buy one of these using its product ID', 'Search for another product', 'Return to the Main Shopping Menu'],
+                    name: 'todo'
+                }).then(answer => {
+                    switch (answer.todo) {
+                        case 'Buy one of these using its product ID':
+                            buy(user);
+                            break;
 
+                            case 'Search for another product':
+                            search(user);
+                            break;
+
+                            case 'Return to the Main Shopping Menu':
+                            shop(user);
+                            break;
+                    }
+                })
+            }
+        });
     })
 };
 
 function buy(user) {
+    inq.prompt([{
+        message: 'What is the ID of the product you would like to buy?',
+        name: 'id'
+    },
+    {
+        message: 'How many do you want to buy?',
+        name: 'quant'
+    }]).then(answers => {
+        let productId = answers.id;
+        connection.query(`SELECT * FROM products WHERE id = ?`, [productId], (err, res) => {
+            if (err) throw err;
+            product = res[0];
+            let price = parseInt(product.price);
+            let quantity = parseInt(product.stock);
+            let quantitytobuy = parseInt(answers.quant);
+            let totalprice = price * quantitytobuy;
+            console.log(`
+    ===========================================================================================
+    Thank you, ${user.username}! Your total cost was $${totalprice}.
+    ===========================================================================================
+    `)
+            updateTable('products', 'stock', (quantity - quantitytobuy), 'id', productId);
+            setTimeout(function () { shop(user) }, 750);
+            
+        });
+        
+    });
+};
 
+
+function updateTable(table, column2fix, newvalue, wherecol, equals) {
+    connection.query(`UPDATE ${table} SET ${column2fix} = ${newvalue} where ${wherecol} = ?`, [equals], (err, res) => {
+        if (err) throw err;
+    })
 };
 
 function browse(user) {
-
+    connection.query(`SELECT * FROM products`, (err, res) => {
+        if (err) throw err;
+        let bTable = new Table({
+            chars: {
+                'top': '═', 'top-mid': '╤', 'top-left': '╔', 'top-right': '╗'
+                , 'bottom': '═', 'bottom-mid': '╧', 'bottom-left': '╚', 'bottom-right': '╝'
+                , 'left': '║', 'left-mid': '╟', 'mid': '─', 'mid-mid': '┼'
+                , 'right': '║', 'right-mid': '╢', 'middle': '│'
+            }
+        });
+        bTable.push(['Product ID', 'Product Name', 'Department', 'Price', 'Stock'])
+        for (i = 0; i < res.length; i++) {
+            let rowArr = []
+            let obj = res[i]
+            for (let key in obj) {
+                if (key !== 'seller') {
+                    rowArr.push(obj[key]);
+                }
+            };
+            bTable.push(rowArr);
+        }
+        console.log(bTable.toString());
+        setTimeout(function () { shop(user) }, 3000);
+        
+    });
 };
 
-// SELECT * FROM table WHERE LOCATE('cookie', item_name);
+function manage(user) {
+    //todo
+    launchMenu();
+};
+
+function supervise(user) {
+    //to do
+    launchMenu();
+};
