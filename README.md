@@ -76,20 +76,8 @@ Without the Databases you can't, but if you have Database seeds (coming in the n
 
 Just Run it in Node with the proper dependencies. They should be in the [package.json](./package.json)
 
-## Running the tests
 
-Explain how to run the automated tests for this system
-
-### Break down into end to end tests
-
-Explain what these tests test and why
-
-```
-Give an example
-```
-
-
-## Authors
+## Guys
 
 * **ShimmeringDeep** AKA Dan Randazzo
 
